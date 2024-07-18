@@ -24,7 +24,7 @@ async function generateSchedule() {
 
     let bestResult = null;
     let bestScore = Infinity;
-    const maxAttempts = 2000; // 最大嘗試次數
+    const maxAttempts = 10000; // 最大嘗試次數
     
     // 多次嘗試生成排班表，選擇最佳結果
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -124,51 +124,80 @@ function validateSchedule(schedule) {
     }
     return true;
 }
-// 修改 optimizeSchedule 函數
+// 優化禁忌算法
 async function optimizeSchedule(year, month) {
+    // 獲取當前月份的天數
     const daysInCurrentMonth = daysInMonth(year, month);
+    
+    // 初始化排班表
     let schedule = initializeSchedule(daysInCurrentMonth);
+    
+    // 創建最佳排班表的深度拷貝
     let bestSchedule = JSON.parse(JSON.stringify(schedule));
+    
+    // 評估初始排班表的分數
     let bestScore = evaluateSchedule(schedule);
     
+    // 設定最大迭代次數
     const maxIterations = 10000;
+    
+    // 設定無改進次數上限
     const maxNoImprovement = 1000;
+    
+    // 初始化無改進計數器
     let noImprovementCount = 0;
     
+    // 創建禁忌列表
     const tabuList = new Set();
+    
+    // 設定禁忌期限
     const tabuTenure = 50;
     
+    // 開始迭代優化
     for (let iteration = 0; iteration < maxIterations; iteration++) {
+        // 生成新的排班方案
         const { newSchedule, move } = generateNeighbor(schedule);
+        
+        // 評估新排班方案的分數
         const newScore = evaluateSchedule(newSchedule);
         
+        // 如果新方案不在禁忌列表中,分數更好,且通過驗證
         if (!tabuList.has(move) && newScore < bestScore && validateSchedule(newSchedule)) {
+            // 更新最佳排班表
             bestSchedule = JSON.parse(JSON.stringify(newSchedule));
             bestScore = newScore;
             schedule = newSchedule;
             noImprovementCount = 0;
             
+            // 將此移動加入禁忌列表
             tabuList.add(move);
+            
+            // 如果禁忌列表超出期限,移除最早的項目
             if (tabuList.size > tabuTenure) {
                 tabuList.delete(tabuList.values().next().value);
             }
         } else {
+            // 如果沒有改進,增加無改進計數
             noImprovementCount++;
         }
         
+        // 如果達到無改進上限或找到完美解,結束迭代
         if (noImprovementCount >= maxNoImprovement || bestScore === 0) {
             break;
         }
         
+        // 每100次迭代暫停一下,允許其他任務執行
         if (iteration % 100 === 0) {
             await new Promise(resolve => setTimeout(resolve, 0));
         }
     }
     
+    // 最後驗證最佳排班表
     if (!validateSchedule(bestSchedule)) {
-        console.error("最終排班表驗證失敗，可能存在連續工作超過6天的情況");
+        console.error("最終排班表驗證失敗,可能存在連續工作超過6天的情況");
     }
     
+    // 返回最佳排班表和其分數
     return { schedule: bestSchedule, score: bestScore };
 }
 // 初始化排班表
