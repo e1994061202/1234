@@ -24,7 +24,7 @@ async function generateSchedule() {
 
     let bestResult = null;
     let bestScore = Infinity;
-    const maxAttempts = 1000; // 最大嘗試次數
+    const maxAttempts = 2000; // 最大嘗試次數
     
     // 多次嘗試生成排班表，選擇最佳結果
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
